@@ -111,10 +111,8 @@ def init():
 
 def init_medium_boxes():
     global box_positions
-    
     box_positions = []
     radius = 150
-    
     for i in range(6):
         angle = math.radians(i * 60)
         x = radius * math.cos(angle)
@@ -152,35 +150,24 @@ def setup_camera():
                   0, 0, 1)
 
 def draw_text(x, y, text, font=GLUT_BITMAP_HELVETICA_18):
-    try:
-        glColor3f(1, 1, 1)
-        
-        current_mode = glGetInteger(GL_MATRIX_MODE)
-        
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        gluOrtho2D(0, window_width, 0, window_height)
-        
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
-        
-        glRasterPos2f(x, y)
-        for ch in text:
-            glutBitmapCharacter(font, ord(ch))
-        
-        glPopMatrix()
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
-        
-        glMatrixMode(current_mode)
-    except Exception as e:
-        print(f"Error in draw_text: {e}")
+    glColor3f(1, 1, 1)
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    gluOrtho2D(0, window_width, 0, window_height)
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    glRasterPos2f(x, y)
+    for ch in text:
+        glutBitmapCharacter(font, ord(ch))
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
+    glMatrixMode(GL_MODELVIEW)
 
 def draw_checkerboard():
     color1, color2 = level_colors[current_level]
-    
     for i in range(-grid_size//2, grid_size//2):
         for j in range(-grid_size//2, grid_size//2):
             if (i + j) % 2 == 0:
@@ -197,7 +184,6 @@ def draw_checkerboard():
 def draw_boundaries():
     wall_height = 30  
     wall_thickness = 1
-    
     colors = wall_colors[current_level]
 
     glColor3f(*colors[0])
@@ -282,7 +268,7 @@ def draw_menu():
     draw_text(window_width/2 - 180, controls_y - 100, "S: Restart game", GLUT_BITMAP_HELVETICA_12)
     draw_text(window_width/2 - 180, controls_y - 120, "Arrow Keys: Adjust camera (third-person)", GLUT_BITMAP_HELVETICA_12)
     draw_text(window_width/2 - 180, controls_y - 140, "Right Click: Toggle first/third person", GLUT_BITMAP_HELVETICA_12)
-    draw_text(window_width/2 - 180, controls_y - 160, "C: Toggle balloon auto-pop", GLUT_BITMAP_HELVETICA_12)
+    draw_text(window_width/2 - 180, controls_y - 160, "C: Toggle balloon auto-pop (Easy mode only)", GLUT_BITMAP_HELVETICA_12)
     draw_text(window_width/2 - 180, controls_y - 180, "M: Return to menu", GLUT_BITMAP_HELVETICA_12)
     draw_text(window_width/2 - 180, controls_y - 200, "ESC: Exit game", GLUT_BITMAP_HELVETICA_12)
 
@@ -292,7 +278,6 @@ def draw_medium_boxes():
     
     for i in range(6):
         x, y, z = box_positions[i]
-        
         color = balloon_colors[i]
         
         glPushMatrix()
@@ -300,8 +285,6 @@ def draw_medium_boxes():
         
         glColor3f(*color)
         glutSolidCube(box_size)
-        
-        count_pos = [x, y, z + box_size]
         
         glColor3f(1.0, 1.0, 1.0)
         glRasterPos3f(0, 0, box_size/2 + 5)
@@ -383,19 +366,19 @@ def update_balloons():
             balloons_to_remove.append(i)
             total_fallen_balloons += 1
             
-            if current_level in [0, 1]:  
-                if total_fallen_balloons >= 20:  
+            if current_level in [0, 1]:
+                if total_fallen_balloons >= 20:
                     current_popped = popped_balloons - last_popped_count
-                    if current_popped < 5:  
-                        game_over = True  
-                        game_state = "GAME_OVER"  
+                    if current_popped < 5:
+                        game_over = True
+                        game_state = "GAME_OVER"
                         print(f"Game Over! You only popped {current_popped} out of 20 balloons!")
                     else:
                         last_popped_count = popped_balloons
                         total_fallen_balloons = 0
                         print(f"Good job! You popped {current_popped} balloons!")
     
-    if balloon_cheat_mode and camera_mode == "third_person":
+    if current_level == 0 and balloon_cheat_mode and camera_mode == "third_person":
         for i, balloon in enumerate(balloons):
             if i in balloons_to_remove:
                 continue
@@ -409,10 +392,6 @@ def update_balloons():
                 balloons_to_remove.append(i)
                 score += 10 * cheat_score_multiplier
                 popped_balloons += 1
-                
-                if (current_level == 1 or current_level == 2) and len(balloon) > 7:
-                    color_index = balloon[7]
-                    add_balloon_to_box(color_index)
                 
     for i in sorted(balloons_to_remove, reverse=True):
         if i < len(balloons):
@@ -810,4 +789,230 @@ def specialKeyListener(key, x, y):
     global cam_angle, cam_height, current_level
     
     if game_state == "MENU":
+        if key == GLUT_KEY_UP:
+            current_level = max(0, current_level - 1)
+        elif key == GLUT_KEY_DOWN:
+            current_level = min(len(difficulty_levels) - 1, current_level + 1)
+    
+    elif game_state == "PLAYING" and camera_mode == "third_person":
+        if key == GLUT_KEY_UP:
+            cam_height += cam_height_speed
+        elif key == GLUT_KEY_DOWN:
+            cam_height = max(min_cam_height, cam_height - cam_height_speed)
+        elif key == GLUT_KEY_LEFT:
+            cam_angle += cam_speed
+        elif key == GLUT_KEY_RIGHT:
+            cam_angle -= cam_speed
+
+        cam_angle %= 360
+    
+    glutPostRedisplay()
+
+def mouseListener(button, state, x, y):
+    global camera_mode
+    
+    if game_state == "PLAYING":
+        if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
+            if camera_mode == "third_person":
+                camera_mode = "first_person"
+            else:
+                camera_mode = "third_person"
+            glutPostRedisplay()
+    
+    glutPostRedisplay()
+
+def idle():
+    if game_state == "PLAYING":
+        if current_level == 0 or current_level == 1:
+            update_balloons()
+            update_chocolate()
+        elif current_level == 2:
+            update_balloons()
+            update_enemies()
+    glutPostRedisplay()
+
+def display():
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glLoadIdentity()
+    
+    if game_state == "MENU":
+        glViewport(0, 0, window_width, window_height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluOrtho2D(0, window_width, 0, window_height)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
         
+        draw_menu()
+    
+    elif game_state == "GAME_OVER":
+        glViewport(0, 0, window_width, window_height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluOrtho2D(0, window_width, 0, window_height)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        
+        draw_text(window_width/2 - 100, window_height/2, "GAME OVER!", GLUT_BITMAP_TIMES_ROMAN_24)
+        current_popped = popped_balloons - last_popped_count
+        draw_text(window_width/2 - 200, window_height/2 - 50, f"You only popped {current_popped} out of 20 balloons!", GLUT_BITMAP_HELVETICA_18)
+        draw_text(window_width/2 - 100, window_height/2 - 100, "Press 'S' to restart", GLUT_BITMAP_HELVETICA_18)
+        draw_text(window_width/2 - 100, window_height/2 - 150, "Press 'M' for menu", GLUT_BITMAP_HELVETICA_18)
+    
+    else:
+        setup_camera()
+        
+        draw_checkerboard()
+        draw_boundaries()
+        
+        if current_level == 1 or current_level == 2:
+            draw_medium_boxes()
+        
+        if current_level == 2:
+            draw_enemies()
+        
+        if camera_mode == "third_person":
+            draw_player()
+        
+        if current_level == 0 or current_level == 1:
+            draw_balloons()
+            
+            if chocolate_active:
+                draw_chocolate()
+        
+        elif current_level == 2:
+            draw_balloons()
+            
+            if chocolate_active:
+                draw_chocolate()
+        
+        draw_text(10, window_height - 30, f"Level: {difficulty_levels[current_level]}")
+        draw_text(10, window_height - 60, f"Camera Mode: {camera_mode.replace('_', ' ').title()}")
+        
+        if current_level == 0:
+            draw_text(10, window_height - 90, f"Balloons Popped: {popped_balloons}")
+            draw_text(10, window_height - 120, f"Chocolates: {chocolates_collected}")
+            draw_text(10, window_height - 150, f"Next Chocolate: {next_chocolate_milestone} balloons", GLUT_BITMAP_HELVETICA_12)
+            current_popped = popped_balloons - last_popped_count
+            draw_text(10, window_height - 180, f"Popped in this set: {current_popped}/5", GLUT_BITMAP_HELVETICA_12)
+            draw_text(10, window_height - 210, f"Total Fallen: {total_fallen_balloons}/20", GLUT_BITMAP_HELVETICA_12)
+            
+            if balloon_cheat_mode:
+                draw_text(10, window_height - 240, f"CHEAT MODE: AUTO-POP ENABLED", GLUT_BITMAP_HELVETICA_12)
+                
+                if camera_mode == "third_person":
+                    glPushMatrix()
+                    glColor4f(1.0, 0.0, 0.0, 0.3)
+                    glTranslatef(player_x, player_y, 1)
+                    
+                    glBegin(GL_LINE_LOOP)
+                    for angle in range(0, 360, 10):
+                        rad = math.radians(angle)
+                        x = auto_pop_radius * math.cos(rad)
+                        y = auto_pop_radius * math.sin(rad)
+                        glVertex3f(x, y, 0)
+                    glEnd()
+                    glPopMatrix()
+        elif current_level == 1:
+            draw_text(10, window_height - 90, f"Balloons Collected: {sum(box_collections)}")
+            draw_text(10, window_height - 120, f"Chocolates: {chocolates_collected}")
+            draw_text(10, window_height - 150, f"Current Box Level: {current_box_level}", GLUT_BITMAP_HELVETICA_12)
+            current_popped = popped_balloons - last_popped_count
+            draw_text(10, window_height - 180, f"Popped in this set: {current_popped}/5", GLUT_BITMAP_HELVETICA_12)
+            draw_text(10, window_height - 210, f"Total Fallen: {total_fallen_balloons}/20", GLUT_BITMAP_HELVETICA_12)
+            
+            if balloon_cheat_mode:
+                draw_text(10, window_height - 240, f"CHEAT MODE: AUTO-POP ENABLED", GLUT_BITMAP_HELVETICA_12)
+                
+                if camera_mode == "third_person":
+                    glPushMatrix()
+                    glColor4f(1.0, 0.0, 0.0, 0.3)
+                    glTranslatef(player_x, player_y, 1)
+                    
+                    glBegin(GL_LINE_LOOP)
+                    for angle in range(0, 360, 10):
+                        rad = math.radians(angle)
+                        x = auto_pop_radius * math.cos(rad)
+                        y = auto_pop_radius * math.sin(rad)
+                        glVertex3f(x, y, 0)
+                    glEnd()
+                    glPopMatrix()
+        
+        elif current_level == 2:
+            draw_text(10, window_height - 90, f"Balloons Collected: {sum(box_collections)}")
+            draw_text(10, window_height - 120, f"Chocolates: {chocolates_collected}")
+            draw_text(10, window_height - 150, f"Current Box Level: {current_box_level}", GLUT_BITMAP_HELVETICA_12)
+            draw_text(10, window_height - 180, "WARNING: Avoid the enemies!", GLUT_BITMAP_HELVETICA_12)
+            
+            if balloon_cheat_mode:
+                draw_text(10, window_height - 210, f"CHEAT MODE: AUTO-POP ENABLED", GLUT_BITMAP_HELVETICA_12)
+                
+                if camera_mode == "third_person":
+                    glPushMatrix()
+                    glColor4f(1.0, 0.0, 0.0, 0.3)
+                    glTranslatef(player_x, player_y, 1)
+                    
+                    glBegin(GL_LINE_LOOP)
+                    for angle in range(0, 360, 10):
+                        rad = math.radians(angle)
+                        x = auto_pop_radius * math.cos(rad)
+                        y = auto_pop_radius * math.sin(rad)
+                        glVertex3f(x, y, 0)
+                    glEnd()
+                    glPopMatrix()
+        
+        draw_text(10, 30, "Press 'F/B' to move, 'L/R' to strafe, 'A/D' to rotate")
+        draw_text(10, 10, "Press 'S' to restart, 'M' for menu, 'C' for cheat mode")
+    
+    glutSwapBuffers()
+
+def reset_game():
+    global balloons, popped_balloons, last_balloon_time, score, balloon_cheat_mode
+    global chocolate_active, chocolates_collected, next_chocolate_milestone
+    global box_collections, current_box_level, medium_reward_given
+    global total_fallen_balloons, last_popped_count, game_over
+    global enemies, last_enemy_time
+    
+    balloons = []
+    popped_balloons = 0
+    score = 0
+    balloon_cheat_mode = False
+    last_balloon_time = time.time()
+    
+    total_fallen_balloons = 0
+    last_popped_count = 0
+    game_over = False
+    
+    chocolate_active = False
+    chocolates_collected = 0
+    next_chocolate_milestone = 5
+    
+    box_collections = [0, 0, 0, 0, 0, 0]
+    current_box_level = 0
+    medium_reward_given = False
+    init_medium_boxes()
+    
+    enemies = []
+    last_enemy_time = time.time()
+
+def main():
+    glutInit()
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
+    glutInitWindowSize(window_width, window_height)
+    glutInitWindowPosition(0, 0)
+    glutCreateWindow(b"3D Navigation Game")
+    
+    init()
+    
+    reset_game()
+    
+    glutDisplayFunc(display)
+    glutKeyboardFunc(keyboardListener)
+    glutSpecialFunc(specialKeyListener)
+    glutMouseFunc(mouseListener)
+    glutIdleFunc(idle)
+    
+    glutMainLoop()
+
+if __name__ == "__main__":
+    main()
